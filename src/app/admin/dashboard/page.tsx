@@ -1,26 +1,16 @@
-'use client';
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 
-import { useRouter } from 'next/navigation';
+export default async function AdminDashboard() {
+  const maybeStore = cookies();
+  const cookieStore =
+    typeof (maybeStore as any).then === "function" ? await (maybeStore as any) : (maybeStore as any);
 
-export default function AdminDashboard() {
-  const router = useRouter();
+  const role = cookieStore.get("role")?.value;
 
-  const handleLogout = () => {
-    document.cookie = 'role=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-    router.push('/login');
-  };
+  if (role !== "ADMIN") {
+    redirect("/login");
+  }
 
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-100">
-      <div className="bg-white p-6 rounded shadow-md">
-        <h1 className="text-2xl mb-4">Admin Dashboard</h1>
-        <button
-          onClick={handleLogout}
-          className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
-        >
-          Logout
-        </button>
-      </div>
-    </div>
-  );
+  return <div className="p-6">ADMIN</div>;
 }
