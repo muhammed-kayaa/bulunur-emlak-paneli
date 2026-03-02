@@ -1,0 +1,112 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  CONSULTANT
+}
+
+enum ListingStatus {
+  ACTIVE
+  SOLD
+}
+
+enum AuthorizationType {
+  YETKILI
+  YETKISIZ
+}
+
+enum PortfolioType {
+  SATILIK
+  KIRALIK
+}
+
+enum AuditActionType {
+  LISTING_DELETED
+  LISTING_SOLD
+  CONSULTANT_DEACTIVATED
+  COMMISSION_RATE_CHANGED
+}
+
+enum TargetType {
+  LISTING
+  CONSULTANT
+  SALE
+}
+
+model Consultant {
+  id             String   @id @default(cuid())
+  name           String
+  email          String   @unique
+  photoUrl       String?
+  commissionRate Int
+  isActive       Boolean  @default(true)
+
+  listings       Listing[]
+  sales          Sale[]
+}
+
+model Listing {
+  id                String            @id @default(cuid())
+  title             String
+  portfolioType     PortfolioType
+  propertyType      String
+  price             Decimal           @db.Decimal(18, 2)
+  rooms             String?
+  sqm               Int?
+  location          String
+  description       String?
+  photos            Json?
+
+  consultantId      String
+  consultant        Consultant        @relation(fields: [consultantId], references: [id])
+
+  authorizationType AuthorizationType
+  status            ListingStatus     @default(ACTIVE)
+
+  isDeleted         Boolean           @default(false)
+  deletedAt         DateTime?
+  deletedBy         String?
+
+  createdAt         DateTime          @default(now())
+  soldAt            DateTime?
+
+  sale              Sale?
+}
+
+model Sale {
+  id                     String    @id @default(cuid())
+
+  listingId              String    @unique
+  listing                Listing   @relation(fields: [listingId], references: [id])
+
+  consultantId           String
+  consultant             Consultant @relation(fields: [consultantId], references: [id])
+
+  monthKey               String
+  commissionAmount       Decimal   @db.Decimal(18, 2)
+  commissionRateSnapshot Int
+  consultantShare        Decimal   @db.Decimal(18, 2)
+  adminShare             Decimal   @db.Decimal(18, 2)
+
+  soldAt                 DateTime
+  createdAt              DateTime  @default(now())
+
+  @@index([monthKey])
+}
+
+model AuditLog {
+  id         String         @id @default(cuid())
+  actionType AuditActionType
+  actorRole  Role
+  actorId    String?
+  targetType TargetType
+  targetId   String
+  createdAt  DateTime       @default(now())
+}
