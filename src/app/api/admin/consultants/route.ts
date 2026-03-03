@@ -1,84 +1,46 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getAll, updateCommissionRate, toggleActive, softDelete, createConsultant } from "@/lib/mock/consultantsStore";
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { requireAdmin } from "@/lib/auth/admin";
 
-export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url);
-  const status = searchParams.get("status") || "all";
-  const q = searchParams.get("q") || "";
+export async function GET() {
+  const guard = requireAdmin();
+  if (!guard.ok) return NextResponse.json({ ok: false, error: guard.error }, { status: 403 });
 
-  const data = getAll({ status, q });
+  const data = await prisma.consultant.findMany({
+    orderBy: { createdAt: "desc" as any }, // sqlite'da createdAt yoksa kaldır
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      photoUrl: true,
+      commissionRate: true,
+      isActive: true,
+      _count: { select: { listings: true, sales: true } },
+    },
+  });
+
   return NextResponse.json({ ok: true, data });
 }
 
-export async function PATCH(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const { id, action, value } = body;
+export async function PATCH(req: Request) {
+  const guard = requireAdmin();
+  if (!guard.ok) return NextResponse.json({ ok: false, error: guard.error }, { status: 403 });
 
-    if (!id || !action) {
-      return NextResponse.json({ ok: false, error: "Missing id or action" }, { status: 400 });
-    }
+  const body = await req.json().catch(() => null);
+  if (!body?.id) return NextResponse.json({ ok: false, error: "id required" }, { status: 400 });
 
-    let result;
-    if (action === "rate") {
-      if (typeof value !== "number") {
-        return NextResponse.json({ ok: false, error: "Invalid value for rate" }, { status: 400 });
-      }
-      result = updateCommissionRate(id, value);
-      if (!result) {
-        return NextResponse.json({ ok: false, error: "Invalid rate or consultant not found" }, { status: 400 });
-      }
-    } else if (action === "toggle") {
-      result = toggleActive(id);
-      if (!result) {
-        return NextResponse.json({ ok: false, error: "Consultant not found" }, { status: 404 });
-      }
-    } else {
-      return NextResponse.json({ ok: false, error: "Invalid action" }, { status: 400 });
-    }
+  const { id, commissionRate, isActive, name, email, photoUrl } = body;
 
-    return NextResponse.json({ ok: true, data: result });
-  } catch (error) {
-    return NextResponse.json({ ok: false, error: "Invalid JSON" }, { status: 400 });
-  }
-}
+  const updated = await prisma.consultant.update({
+    where: { id },
+    data: {
+      ...(typeof commissionRate === "number" ? { commissionRate } : {}),
+      ...(typeof isActive === "boolean" ? { isActive } : {}),
+      ...(typeof name === "string" ? { name } : {}),
+      ...(typeof email === "string" ? { email } : {}),
+      ...(photoUrl === null || typeof photoUrl === "string" ? { photoUrl } : {}),
+    },
+  });
 
-export async function DELETE(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const { id } = body;
-
-    if (!id) {
-      return NextResponse.json({ ok: false, error: "Missing id" }, { status: 400 });
-    }
-
-    const success = softDelete(id);
-    if (!success) {
-      return NextResponse.json({ ok: false, error: "Consultant not found" }, { status: 404 });
-    }
-
-    return NextResponse.json({ ok: true });
-  } catch (error) {
-    return NextResponse.json({ ok: false, error: "Invalid JSON" }, { status: 400 });
-  }
-}
-
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const { name, email, photoUrl, commissionRate } = body;
-
-    if (!name || !email || commissionRate === undefined) {
-      return NextResponse.json({ ok: false, error: "Missing required fields" }, { status: 400 });
-    }
-
-    const created = createConsultant({ name, email, photoUrl, commissionRate });
-    if (!created) {
-      return NextResponse.json({ ok: false, error: "Validation failed" }, { status: 400 });
-    }
-
-    return NextResponse.json({ ok: true, data: created });
-  } catch (error) {
-    return NextResponse.json({ ok: false, error: "Invalid JSON" }, { status: 400 });
-  }
+  return NextResponse.json({ ok: true, data: updated });
 }
