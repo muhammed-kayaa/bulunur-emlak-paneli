@@ -1,7 +1,24 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Listing, PortfolioType, PropertyType, AuthorizationType, ListingStatus } from "@/lib/mock/listingsStore";
+import { markListingSold } from "@/lib/actions/listings";
+
+type PortfolioType = "SATILIK" | "KIRALIK";
+type PropertyType = string;
+type AuthorizationType = "YETKILI" | "YETKISIZ";
+type ListingStatus = "ACTIVE" | "SOLD";
+
+type ListingRow = {
+  id: string;
+  title: string;
+  portfolioType: PortfolioType;
+  propertyType: PropertyType;
+  authorizationType: AuthorizationType;
+  status: ListingStatus;
+  isDeleted: boolean;
+  createdAt: string;
+  price: number | string;
+};
 
 type Filters = {
   q: string;
@@ -12,7 +29,7 @@ type Filters = {
 };
 
 export default function Page() {
-  const [listings, setListings] = useState<Listing[]>([]);
+  const [listings, setListings] = useState<ListingRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"add" | "list">("list");
@@ -157,8 +174,31 @@ export default function Page() {
     }
   };
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY" }).format(price);
+  const handleMarkSold = async (listingId: string) => {
+    const input = prompt("Enter commission amount:");
+    if (input === null) return;
+    const commissionAmount = parseFloat(input);
+    if (!Number.isFinite(commissionAmount) || commissionAmount <= 0) {
+      alert("Invalid commission amount");
+      return;
+    }
+
+    try {
+      const result = await markListingSold({ listingId, commissionAmount });
+      if (result.success) {
+        alert("Sold");
+        await fetchListings();
+      } else {
+        alert(result.error);
+      }
+    } catch (err) {
+      alert("Network error");
+    }
+  };
+
+  const formatPrice = (price: number | string) => {
+    const numPrice = typeof price === "string" ? parseFloat(price) : price;
+    return new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY" }).format(numPrice);
   };
 
   const formatDate = (dateStr: string) => {
@@ -403,6 +443,14 @@ export default function Page() {
                       )}
                     </td>
                     <td className="p-4">
+                      {listing.status === "ACTIVE" && !listing.isDeleted && (
+                        <button
+                          onClick={() => handleMarkSold(listing.id)}
+                          className="text-green-400 hover:text-green-300 mr-4"
+                        >
+                          Mark Sold
+                        </button>
+                      )}
                       <button
                         onClick={() => handleDelete(listing.id)}
                         className="text-red-400 hover:text-red-300"

@@ -1,118 +1,149 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getByConsultantId, createListing, updateAuthorizationType, softDelete } from "@/lib/mock/listingsStore";
+import { cookies } from "next/headers";
+import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
 
-async function getConsultantId(): Promise<string> {
-  const { cookies } = await import("next/headers");
-  const cookieStore = cookies();
-  const resolvedCookies = cookieStore instanceof Promise ? await cookieStore : cookieStore;
-  const userId = resolvedCookies.get("userId")?.value;
-  return userId || "1"; // fallback to "1"
+async function getConsultantIdFromCookies(): Promise<string | null> {
+  const store = await cookies();
+  return store.get("consultantId")?.value ?? null; // senin cookie adın buysa
 }
 
-export async function GET(request: NextRequest) {
+export async function GET(req: NextRequest) {
   try {
-    const consultantId = await getConsultantId();
-    const { searchParams } = new URL(request.url);
-
-    const q = searchParams.get("q") || undefined;
-    const statusParam = searchParams.get("status");
-    const status = statusParam === "all" || statusParam === "ACTIVE" || statusParam === "SOLD" ? statusParam : "all";
-    const authParam = searchParams.get("auth");
-    const auth = authParam === "all" || authParam === "YETKILI" || authParam === "YETKISIZ" ? authParam : "all";
-    const portfolioParam = searchParams.get("portfolio");
-    const portfolio = portfolioParam === "all" || portfolioParam === "SATILIK" || portfolioParam === "KIRALIK" ? portfolioParam : "all";
-    const deletedParam = searchParams.get("deleted");
-    const deleted = deletedParam === "hide" || deletedParam === "showOnlyDeleted" || deletedParam === "showAll" ? deletedParam : "hide";
-
-    const listings = getByConsultantId(consultantId, { q, status, auth, portfolio, deleted });
-
-    return NextResponse.json({ ok: true, data: listings });
-  } catch (error) {
-    return NextResponse.json({ ok: false, error: "Failed to fetch listings" }, { status: 500 });
-  }
-}
-
-export async function POST(request: NextRequest) {
-  try {
-    const consultantId = await getConsultantId();
-    const body = await request.json();
-
-    const { title, portfolioType, propertyType, price, rooms, sqm, location, authorizationType } = body;
-
-    if (!title || !portfolioType || !propertyType || typeof price !== 'number' || !location?.city || !location?.district || !authorizationType) {
-      return NextResponse.json({ ok: false, error: "Missing required fields" }, { status: 400 });
+    const consultantId = await getConsultantIdFromCookies();
+    if (!consultantId) {
+      return NextResponse.json({ ok: false, error: "Unauthorized: consultantId cookie not found" }, { status: 401 });
     }
 
-    const newListing = createListing({
-      title,
-      portfolioType,
-      propertyType,
-      price,
-      rooms,
-      sqm,
-      location,
-      authorizationType,
+    const { searchParams } = new URL(req.url);
+
+    const q = (searchParams.get("q") ?? "").trim();
+    const status = (searchParams.get("status") ?? "all") as "all" | "ACTIVE" | "SOLD";
+    const auth = (searchParams.get("auth") ?? "all") as "all" | "YETKILI" | "YETKISIZ";
+    const portfolio = (searchParams.get("portfolio") ?? "all") as "all" | "SATILIK" | "KIRALIK";
+    const deleted = (searchParams.get("deleted") ?? "hide") as "hide" | "showOnlyDeleted" | "showAll";
+
+    const where: Prisma.ListingWhereInput = {
       consultantId,
+    };
+
+    // q => OR array (undefined yok)
+    if (q) {
+      where.OR = [
+        { title: { contains: q } },
+        { location: { contains: q } },
+      ];
+    }
+
+    if (status !== "all") where.status = status;
+    if (auth !== "all") where.authorizationType = auth;
+    if (portfolio !== "all") where.portfolioType = portfolio;
+
+    if (deleted === "hide") where.isDeleted = false;
+    if (deleted === "showOnlyDeleted") where.isDeleted = true;
+    // showAll => filtre yok
+
+    const listings = await prisma.listing.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
     });
 
-    return NextResponse.json({ ok: true, data: newListing });
-  } catch (error) {
-    return NextResponse.json({ ok: false, error: "Failed to create listing" }, { status: 500 });
+    return NextResponse.json({ ok: true, data: listings });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Server error";
+    return NextResponse.json({ ok: false, error: msg }, { status: 500 });
   }
 }
 
-export async function PATCH(request: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
-    const consultantId = await getConsultantId();
-    const body = await request.json();
-    const { id, authorizationType } = body;
-
-    if (!id || !authorizationType) {
-      return NextResponse.json({ ok: false, error: "Missing id or authorizationType" }, { status: 400 });
+    const consultantId = await getConsultantIdFromCookies();
+    if (!consultantId) {
+      return NextResponse.json({ ok: false, error: "Unauthorized: consultantId cookie not found" }, { status: 401 });
     }
 
-    // Check if listing belongs to consultant and not deleted
-    const listings = getByConsultantId(consultantId, { deleted: "showAll" });
-    const listing = listings.find(l => l.id === id);
-    if (!listing || listing.isDeleted) {
-      return NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 });
-    }
+    const body = await req.json();
 
-    const success = updateAuthorizationType(id, authorizationType);
-    if (!success) {
-      return NextResponse.json({ ok: false, error: "Listing not found" }, { status: 404 });
-    }
+    const created = await prisma.listing.create({
+      data: {
+        title: String(body.title ?? "").trim(),
+        portfolioType: body.portfolioType,
+        propertyType: String(body.propertyType ?? ""),
+        price: body.price, // schema’da Decimal/Float neyse prisma handle eder
+        rooms: body.rooms ?? null,
+        sqm: body.sqm ?? null,
+        location: `${body.location?.city ?? ""} ${body.location?.district ?? ""} ${body.location?.neighborhood ?? ""}`.trim(),
+        description: body.description ?? null,
+        photos: body.photos ?? null,
+        consultantId,
+        authorizationType: body.authorizationType,
+        status: "ACTIVE",
+        isDeleted: false,
+      },
+    });
 
-    return NextResponse.json({ ok: true });
-  } catch (error) {
-    return NextResponse.json({ ok: false, error: "Failed to update listing" }, { status: 500 });
+    return NextResponse.json({ ok: true, data: created });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Server error";
+    return NextResponse.json({ ok: false, error: msg }, { status: 500 });
   }
 }
 
-export async function DELETE(request: NextRequest) {
+export async function PATCH(req: NextRequest) {
   try {
-    const consultantId = await getConsultantId();
-    const body = await request.json();
-    const { id } = body;
-
-    if (!id) {
-      return NextResponse.json({ ok: false, error: "Missing id" }, { status: 400 });
+    const consultantId = await getConsultantIdFromCookies();
+    if (!consultantId) {
+      return NextResponse.json({ ok: false, error: "Unauthorized: consultantId cookie not found" }, { status: 401 });
     }
 
-    // Check if listing belongs to consultant
-    const listings = getByConsultantId(consultantId, { deleted: "showAll" });
-    const listing = listings.find(l => l.id === id);
-    if (!listing) {
-      return NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 });
+    const body = await req.json();
+    const id = String(body.id ?? "").trim();
+    if (!id) return NextResponse.json({ ok: false, error: "id required" }, { status: 400 });
+
+    // sadece kendi ilanını güncelleyebilsin
+    const listing = await prisma.listing.findUnique({ where: { id } });
+    if (!listing || listing.consultantId !== consultantId) {
+      return NextResponse.json({ ok: false, error: "Not found" }, { status: 404 });
     }
 
-    const success = softDelete(id, { role: "CONSULTANT", id: consultantId });
-    if (!success) {
-      return NextResponse.json({ ok: false, error: "Listing not found" }, { status: 404 });
+    const updated = await prisma.listing.update({
+      where: { id },
+      data: {
+        authorizationType: body.authorizationType ?? undefined,
+      },
+    });
+
+    return NextResponse.json({ ok: true, data: updated });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Server error";
+    return NextResponse.json({ ok: false, error: msg }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const consultantId = await getConsultantIdFromCookies();
+    if (!consultantId) {
+      return NextResponse.json({ ok: false, error: "Unauthorized: consultantId cookie not found" }, { status: 401 });
     }
 
-    return NextResponse.json({ ok: true });
-  } catch (error) {
-    return NextResponse.json({ ok: false, error: "Failed to delete listing" }, { status: 500 });
+    const body = await req.json();
+    const id = String(body.id ?? "").trim();
+    if (!id) return NextResponse.json({ ok: false, error: "id required" }, { status: 400 });
+
+    const listing = await prisma.listing.findUnique({ where: { id } });
+    if (!listing || listing.consultantId !== consultantId) {
+      return NextResponse.json({ ok: false, error: "Not found" }, { status: 404 });
+    }
+
+    const updated = await prisma.listing.update({
+      where: { id },
+      data: { isDeleted: true, deletedAt: new Date(), deletedBy: consultantId },
+    });
+
+    return NextResponse.json({ ok: true, data: updated });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Server error";
+    return NextResponse.json({ ok: false, error: msg }, { status: 500 });
   }
 }

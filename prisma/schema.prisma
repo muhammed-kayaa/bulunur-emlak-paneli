@@ -57,7 +57,7 @@ model Listing {
   title             String
   portfolioType     PortfolioType
   propertyType      String
-  price             Decimal           @db.Decimal(18, 2)
+  price             Decimal
   rooms             String?
   sqm               Int?
   location          String
@@ -81,22 +81,22 @@ model Listing {
 }
 
 model Sale {
-  id                     String    @id @default(cuid())
+  id                     String     @id @default(cuid())
 
-  listingId              String    @unique
-  listing                Listing   @relation(fields: [listingId], references: [id])
+  listingId              String     @unique
+  listing                Listing    @relation(fields: [listingId], references: [id])
 
   consultantId           String
   consultant             Consultant @relation(fields: [consultantId], references: [id])
 
   monthKey               String
-  commissionAmount       Decimal   @db.Decimal(18, 2)
+  commissionAmount       Decimal
   commissionRateSnapshot Int
-  consultantShare        Decimal   @db.Decimal(18, 2)
-  adminShare             Decimal   @db.Decimal(18, 2)
+  consultantShare        Decimal
+  adminShare             Decimal
 
   soldAt                 DateTime
-  createdAt              DateTime  @default(now())
+  createdAt              DateTime   @default(now())
 
   @@index([monthKey])
 }
