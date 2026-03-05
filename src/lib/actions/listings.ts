@@ -33,7 +33,7 @@ export async function markListingSold(
       return { success: false, error: "Invalid input: commissionAmount must be > 0" };
     }
 
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx: any) => {
       const consultant = await tx.consultant.findUnique({
         where: { id: consultantId },
         select: { id: true, isActive: true, commissionRate: true },

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
+import { markListingSold } from "@/lib/actions/listings";
 
 async function getConsultantIdFromCookies(): Promise<string | null> {
   const store = await cookies();
@@ -142,6 +143,37 @@ export async function DELETE(req: NextRequest) {
     });
 
     return NextResponse.json({ ok: true, data: updated });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Server error";
+    return NextResponse.json({ ok: false, error: msg }, { status: 500 });
+  }
+}
+
+export async function PUT(req: NextRequest) {
+  try {
+    const consultantId = await getConsultantIdFromCookies();
+    if (!consultantId) {
+      return NextResponse.json({ ok: false, error: "Unauthorized: consultantId cookie not found" }, { status: 401 });
+    }
+
+    const body = await req.json();
+    const listingId = String(body.listingId ?? "").trim();
+    const commissionAmount = Number(body.commissionAmount);
+
+    if (!listingId) {
+      return NextResponse.json({ ok: false, error: "listingId is required" }, { status: 400 });
+    }
+    if (!Number.isFinite(commissionAmount) || commissionAmount <= 0) {
+      return NextResponse.json({ ok: false, error: "commissionAmount must be a positive number" }, { status: 400 });
+    }
+
+    const result = await markListingSold({ listingId, commissionAmount });
+
+    if (result.success) {
+      return NextResponse.json({ ok: true });
+    } else {
+      return NextResponse.json({ ok: false, error: result.error }, { status: 400 });
+    }
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Server error";
     return NextResponse.json({ ok: false, error: msg }, { status: 500 });

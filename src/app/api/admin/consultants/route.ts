@@ -3,11 +3,12 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth/admin";
 
 export async function GET() {
-  const guard = requireAdmin();
-  if (!guard.ok) return NextResponse.json({ ok: false, error: guard.error }, { status: 403 });
+  const auth = await requireAdmin();
+  if (!auth.ok) {
+    return NextResponse.json({ ok: false, error: auth.error });
+  }
 
-  const data = await prisma.consultant.findMany({
-    orderBy: { createdAt: "desc" as any }, // sqlite'da createdAt yoksa kaldır
+  const consultants = await prisma.consultant.findMany({
     select: {
       id: true,
       name: true,
@@ -15,32 +16,91 @@ export async function GET() {
       photoUrl: true,
       commissionRate: true,
       isActive: true,
-      _count: { select: { listings: true, sales: true } },
+    },
+    orderBy: {
+      name: 'asc',
     },
   });
 
-  return NextResponse.json({ ok: true, data });
+  return NextResponse.json({ ok: true, data: consultants });
 }
 
-export async function PATCH(req: Request) {
-  const guard = requireAdmin();
-  if (!guard.ok) return NextResponse.json({ ok: false, error: guard.error }, { status: 403 });
+export async function PATCH(request: Request) {
+  const auth = await requireAdmin();
+  if (!auth.ok) {
+    return NextResponse.json({ ok: false, error: auth.error });
+  }
 
-  const body = await req.json().catch(() => null);
-  if (!body?.id) return NextResponse.json({ ok: false, error: "id required" }, { status: 400 });
+  const body = await request.json();
+  const { id, isActive, commissionRate } = body;
 
-  const { id, commissionRate, isActive, name, email, photoUrl } = body;
+  if (!id) {
+    return NextResponse.json({ ok: false, error: "id is required" }, { status: 400 });
+  }
 
-  const updated = await prisma.consultant.update({
+  if (commissionRate !== undefined && (commissionRate < 0 || commissionRate > 100)) {
+    return NextResponse.json({ ok: false, error: "commissionRate must be between 0 and 100" }, { status: 400 });
+  }
+
+  // Fetch current consultant
+  const currentConsultant = await prisma.consultant.findUnique({
     where: { id },
-    data: {
-      ...(typeof commissionRate === "number" ? { commissionRate } : {}),
-      ...(typeof isActive === "boolean" ? { isActive } : {}),
-      ...(typeof name === "string" ? { name } : {}),
-      ...(typeof email === "string" ? { email } : {}),
-      ...(photoUrl === null || typeof photoUrl === "string" ? { photoUrl } : {}),
+    select: { isActive: true, commissionRate: true },
+  });
+
+  if (!currentConsultant) {
+    return NextResponse.json({ ok: false, error: "Consultant not found" }, { status: 404 });
+  }
+
+  // Prepare update data
+  const updateData: any = {};
+  if (isActive !== undefined) {
+    updateData.isActive = isActive;
+  }
+  if (commissionRate !== undefined) {
+    updateData.commissionRate = commissionRate;
+  }
+
+  // Update
+  const updatedConsultant = await prisma.consultant.update({
+    where: { id },
+    data: updateData,
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      photoUrl: true,
+      commissionRate: true,
+      isActive: true,
     },
   });
 
-  return NextResponse.json({ ok: true, data: updated });
+  // Audit logs
+  if (isActive !== undefined && isActive === false && currentConsultant.isActive === true) {
+    await prisma.auditLog.create({
+      data: {
+        actionType: "CONSULTANT_DEACTIVATED",
+        actorRole: "ADMIN",
+        actorId: null,
+        targetType: "CONSULTANT",
+        targetId: id,
+        createdAt: new Date(),
+      },
+    });
+  }
+
+  if (commissionRate !== undefined && commissionRate !== currentConsultant.commissionRate) {
+    await prisma.auditLog.create({
+      data: {
+        actionType: "COMMISSION_RATE_CHANGED",
+        actorRole: "ADMIN",
+        actorId: null,
+        targetType: "CONSULTANT",
+        targetId: id,
+        createdAt: new Date(),
+      },
+    });
+  }
+
+  return NextResponse.json({ ok: true, data: updatedConsultant });
 }

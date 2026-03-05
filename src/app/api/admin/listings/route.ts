@@ -1,36 +1,67 @@
 import { NextResponse } from "next/server";
-import { Prisma } from "@prisma/client";
+import type { Prisma, ListingStatus, AuthorizationType, PortfolioType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth/admin";
 
+function isListingStatus(v: unknown): v is ListingStatus {
+  return v === "ACTIVE" || v === "SOLD";
+}
+function isAuthorizationType(v: unknown): v is AuthorizationType {
+  return v === "YETKILI" || v === "YETKISIZ";
+}
+function isPortfolioType(v: unknown): v is PortfolioType {
+  return v === "SATILIK" || v === "KIRALIK";
+}
+
 export async function GET(req: Request) {
-  const guard = requireAdmin();
-  if (!guard.ok) return NextResponse.json({ ok: false, error: guard.error }, { status: 403 });
+  const guard = await requireAdmin();
+  if (!guard.ok) {
+    return NextResponse.json({ ok: false, error: guard.error }, { status: 403 });
+  }
 
   const { searchParams } = new URL(req.url);
 
-  const q = searchParams.get("q")?.trim() || "";
-  const status = searchParams.get("status") || "all";
-  const auth = searchParams.get("auth") || "all";
-  const portfolio = searchParams.get("portfolio") || "all";
-  const deleted = searchParams.get("deleted") || "hide";
+  const q = searchParams.get("q")?.trim() ?? "";
+  const statusParam = searchParams.get("status") ?? "all";
+  const authParam = searchParams.get("auth") ?? "all";
+  const portfolioParam = searchParams.get("portfolio") ?? "all";
+  const deleted = searchParams.get("deleted") ?? "hide";
 
-  const where: any = {};
+  const where: Prisma.ListingWhereInput = {};
 
   if (q) {
-    where.OR = [
-      { title: { contains: q } },
-      { location: { contains: q } },
-    ];
+     where.OR = [
+       { title: { contains: q } },
+       { location: { contains: q } },
+];
   }
 
-  if (status !== "all") where.status = status as Prisma.ListingStatus;
-  if (auth !== "all") where.authorizationType = auth as Prisma.AuthorizationType;
-  if (portfolio !== "all") where.portfolioType = portfolio as Prisma.PortfolioType;
+  if (statusParam !== "all") {
+    if (!isListingStatus(statusParam)) {
+      return NextResponse.json({ ok: false, error: "Invalid status" }, { status: 400 });
+    }
+    where.status = statusParam;
+  }
+
+  if (authParam !== "all") {
+    if (!isAuthorizationType(authParam)) {
+      return NextResponse.json({ ok: false, error: "Invalid authorizationType" }, { status: 400 });
+    }
+    where.authorizationType = authParam;
+  }
+
+  if (portfolioParam !== "all") {
+    if (!isPortfolioType(portfolioParam)) {
+      return NextResponse.json({ ok: false, error: "Invalid portfolioType" }, { status: 400 });
+    }
+    where.portfolioType = portfolioParam;
+  }
 
   if (deleted === "hide") where.isDeleted = false;
-  if (deleted === "showOnlyDeleted") where.isDeleted = true;
-  // showAll => filtre yok
+  else if (deleted === "showOnlyDeleted") where.isDeleted = true;
+  else if (deleted !== "showAll") {
+    return NextResponse.json({ ok: false, error: "Invalid deleted filter" }, { status: 400 });
+  }
 
   const data = await prisma.listing.findMany({
     where,
@@ -42,42 +73,78 @@ export async function GET(req: Request) {
 }
 
 export async function DELETE(req: Request) {
-  const guard = requireAdmin();
-  if (!guard.ok) return NextResponse.json({ ok: false, error: guard.error }, { status: 403 });
+  const guard = await requireAdmin();
+  if (!guard.ok) {
+    return NextResponse.json({ ok: false, error: guard.error }, { status: 403 });
+  }
 
   const body = await req.json().catch(() => null);
-  const id = body?.id;
-  if (!id) return NextResponse.json({ ok: false, error: "id required" }, { status: 400 });
+  const id = body?.id as string | undefined;
 
-  // soft delete
-  await prisma.listing.update({
-    where: { id },
-    data: {
-      isDeleted: true,
-      deletedAt: new Date(),
-      deletedBy: "ADMIN",
-    },
-  });
+  if (!id) {
+    return NextResponse.json({ ok: false, error: "id required" }, { status: 400 });
+  }
 
-  return NextResponse.json({ ok: true });
+  try {
+    await prisma.listing.update({
+      where: { id },
+      data: {
+        isDeleted: true,
+        deletedAt: new Date(),
+        deletedBy: "ADMIN",
+      },
+    });
+
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    return NextResponse.json({ ok: false, error: "Listing not found" }, { status: 404 });
+  }
 }
 
 export async function PATCH(req: Request) {
-  const guard = requireAdmin();
-  if (!guard.ok) return NextResponse.json({ ok: false, error: guard.error }, { status: 403 });
+  const guard = await requireAdmin();
+  if (!guard.ok) {
+    return NextResponse.json({ ok: false, error: guard.error }, { status: 403 });
+  }
 
   const body = await req.json().catch(() => null);
-  if (!body?.id) return NextResponse.json({ ok: false, error: "id required" }, { status: 400 });
+  const id = body?.id as string | undefined;
 
-  const { id, authorizationType, status } = body;
+  if (!id) {
+    return NextResponse.json({ ok: false, error: "id required" }, { status: 400 });
+  }
 
-  const updated = await prisma.listing.update({
-    where: { id },
-    data: {
-      ...(authorizationType ? { authorizationType } : {}),
-      ...(status ? { status } : {}),
-    },
-  });
+  const authorizationType = body?.authorizationType as unknown;
+  const status = body?.status as unknown;
 
-  return NextResponse.json({ ok: true, data: updated });
+  if (authorizationType === undefined && status === undefined) {
+    return NextResponse.json({ ok: false, error: "At least one field (authorizationType or status) is required" }, { status: 400 });
+  }
+
+  const data: Prisma.ListingUpdateInput = {};
+
+  if (authorizationType !== undefined) {
+    if (!isAuthorizationType(authorizationType)) {
+      return NextResponse.json({ ok: false, error: "Invalid authorizationType" }, { status: 400 });
+    }
+    data.authorizationType = authorizationType;
+  }
+
+  if (status !== undefined) {
+    if (!isListingStatus(status)) {
+      return NextResponse.json({ ok: false, error: "Invalid status" }, { status: 400 });
+    }
+    data.status = status;
+  }
+
+  try {
+    const updated = await prisma.listing.update({
+      where: { id },
+      data,
+    });
+
+    return NextResponse.json({ ok: true, data: updated });
+  } catch (error) {
+    return NextResponse.json({ ok: false, error: "Listing not found" }, { status: 404 });
+  }
 }
