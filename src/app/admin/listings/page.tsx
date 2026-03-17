@@ -1,211 +1,284 @@
-"use client";
+"use client"
 
-import { useEffect, useMemo, useState } from "react";
-import { Listing } from "@/lib/mock/listingsStore";
-import { Consultant } from "@/lib/mock/consultantsStore";
+import { useEffect, useState } from "react"
 
-const formatCurrency = (amount: number) => {
+type ListingRow = {
+  id: string
+  title: string
+  portfolioType: "SATILIK" | "KIRALIK"
+  propertyType: string
+  price: number | string
+  location: string
+  authorizationType: "YETKILI" | "YETKISIZ"
+  status: "ACTIVE" | "SOLD"
+  isDeleted: boolean
+  createdAt: string
+  soldAt?: string | null
+  consultant: {
+    id: string
+    name: string
+    email: string
+  }
+}
+
+type Filters = {
+  q: string
+  status: "all" | "ACTIVE" | "SOLD"
+  auth: "all" | "YETKILI" | "YETKISIZ"
+  portfolio: "all" | "SATILIK" | "KIRALIK"
+  deleted: "hide" | "showOnlyDeleted" | "showAll"
+}
+
+const formatPrice = (price: number | string) => {
+  const amount = typeof price === "string" ? Number(price) : price
+  if (Number.isNaN(amount)) return "-"
   return new Intl.NumberFormat("tr-TR", {
     style: "currency",
     currency: "TRY",
-  }).format(amount);
-};
+  }).format(amount)
+}
 
-export default function Page() {
-  const [listings, setListings] = useState<Listing[]>([]);
-  const [consultants, setConsultants] = useState<Consultant[]>([]);
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "ACTIVE" | "SOLD">("all");
-  const [authFilter, setAuthFilter] = useState<"all" | "YETKILI" | "YETKISIZ">("all");
-  const [portfolioFilter, setPortfolioFilter] = useState<"all" | "SATILIK" | "KIRALIK">("all");
-  const [deletedFilter, setDeletedFilter] = useState<"hide" | "showOnlyDeleted" | "showAll">("hide");
+export default function AdminListingsPage() {
+  const [listings, setListings] = useState<ListingRow[]>([])
+  const [filters, setFilters] = useState<Filters>({
+    q: "",
+    status: "all",
+    auth: "all",
+    portfolio: "all",
+    deleted: "hide",
+  })
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [savingId, setSavingId] = useState<string | null>(null)
+  const [statusMessage, setStatusMessage] = useState<string | null>(null)
+
+  const buildQuery = (f: Filters) => {
+    const params = new URLSearchParams()
+    if (f.q.trim()) params.set("q", f.q.trim())
+    if (f.status !== "all") params.set("status", f.status)
+    if (f.auth !== "all") params.set("auth", f.auth)
+    if (f.portfolio !== "all") params.set("portfolio", f.portfolio)
+    if (f.deleted !== "hide") params.set("deleted", f.deleted)
+    return params.toString()
+  }
 
   const fetchListings = async () => {
-    const params = new URLSearchParams();
-    if (search) params.append("q", search);
-    if (statusFilter !== "all") params.append("status", statusFilter);
-    if (authFilter !== "all") params.append("auth", authFilter);
-    if (portfolioFilter !== "all") params.append("portfolio", portfolioFilter);
-    if (deletedFilter !== "hide") params.append("deleted", deletedFilter);
-    const res = await fetch(`/api/admin/listings?${params}`);
-    const json = await res.json();
-    if (json.ok) {
-      setListings(json.data);
+    setLoading(true)
+    setError(null)
+    setStatusMessage(null)
+    try {
+      const query = buildQuery(filters)
+      const url = `/api/admin/listings${query ? `?${query}` : ""}`
+      const res = await fetch(url)
+      const json = await res.json()
+      if (!res.ok || !json.ok) {
+        setError(json?.error || "Failed to fetch listings")
+        setListings([])
+        return
+      }
+      setListings(Array.isArray(json.data) ? json.data : [])
+    } catch {
+      setError("Failed to fetch listings")
+      setListings([])
+    } finally {
+      setLoading(false)
     }
-  };
-
-  const fetchConsultants = async () => {
-    const res = await fetch("/api/admin/consultants");
-    const json = await res.json();
-    if (json.ok) {
-      setConsultants(json.data);
-    }
-  };
+  }
 
   useEffect(() => {
-    fetchConsultants();
-  }, []);
+    void fetchListings()
+  }, [filters])
 
-  useEffect(() => {
-    fetchListings();
-  }, [search, statusFilter, authFilter, portfolioFilter, deletedFilter]);
+  const patchListing = async (id: string, payload: { authorizationType?: "YETKILI" | "YETKISIZ"; status?: "ACTIVE" | "SOLD" }) => {
+    setSavingId(id)
+    setStatusMessage(null)
+    try {
+      const res = await fetch("/api/admin/listings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, ...payload }),
+      })
+      const json = await res.json()
+      if (!res.ok || !json.ok) {
+        alert(json?.error || "Failed to update listing")
+        return
+      }
+      setStatusMessage("Listing updated successfully")
+      await fetchListings()
+    } catch {
+      alert("Failed to update listing")
+    } finally {
+      setSavingId(null)
+    }
+  }
 
-  const consultantMap = useMemo(() => {
-    const map: { [id: string]: Consultant } = {};
-    consultants.forEach(c => {
-      map[c.id] = c;
-    });
-    return map;
-  }, [consultants]);
-
-  const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase();
-  };
+  const deleteListing = async (id: string) => {
+    if (!confirm("Bu ilan� silmek istedi�inize emin misiniz?")) return
+    setSavingId(id)
+    setStatusMessage(null)
+    try {
+      const res = await fetch("/api/admin/listings", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      })
+      const json = await res.json()
+      if (!res.ok || !json.ok) {
+        alert(json?.error || "Failed to delete listing")
+        return
+      }
+      setStatusMessage("Listing deleted successfully")
+      await fetchListings()
+    } catch {
+      alert("Failed to delete listing")
+    } finally {
+      setSavingId(null)
+    }
+  }
 
   return (
-    <div className="p-6 bg-gray-900 text-white min-h-screen">
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold">Admin • İlanlar</h1>
-        <p className="mt-2 text-white/60">
-          Tüm ilanlar ve durumları
-        </p>
-      </div>
+    <div className="min-h-screen bg-slate-950 p-6 text-slate-100">
+      <div className="mx-auto max-w-6xl space-y-4">
+        <div className="rounded-xl border border-slate-800 bg-slate-900 p-5">
+          <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+            <div>
+              <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Admin</p>
+              <h1 className="text-2xl font-bold text-white">Listings</h1>
+            </div>
+            <p className="text-sm text-slate-300">Manage listings from your DB via admin API.</p>
+          </div>
 
-      {/* Toolbar */}
-      <div className="flex flex-col md:flex-row gap-4 mb-6">
-        <input
-          type="text"
-          placeholder="Başlık veya konum ile ara..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="flex-1 px-4 py-2 bg-gray-800 border border-white/10 rounded-lg text-white placeholder-white/50"
-        />
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as "all" | "ACTIVE" | "SOLD")}
-          className="px-4 py-2 bg-gray-800 border border-white/10 rounded-lg text-white"
-        >
-          <option value="all">Tüm Durumlar</option>
-          <option value="ACTIVE">Aktif</option>
-          <option value="SOLD">Satıldı</option>
-        </select>
-        <select
-          value={authFilter}
-          onChange={(e) => setAuthFilter(e.target.value as "all" | "YETKILI" | "YETKISIZ")}
-          className="px-4 py-2 bg-gray-800 border border-white/10 rounded-lg text-white"
-        >
-          <option value="all">Tüm Yetkilendirme</option>
-          <option value="YETKILI">Yetkili</option>
-          <option value="YETKISIZ">Yetkisiz</option>
-        </select>
-        <select
-          value={portfolioFilter}
-          onChange={(e) => setPortfolioFilter(e.target.value as "all" | "SATILIK" | "KIRALIK")}
-          className="px-4 py-2 bg-gray-800 border border-white/10 rounded-lg text-white"
-        >
-          <option value="all">Tüm Portföy</option>
-          <option value="SATILIK">Satılık</option>
-          <option value="KIRALIK">Kiralık</option>
-        </select>
-        <select
-          value={deletedFilter}
-          onChange={(e) => setDeletedFilter(e.target.value as "hide" | "showOnlyDeleted" | "showAll")}
-          className="px-4 py-2 bg-gray-800 border border-white/10 rounded-lg text-white"
-        >
-          <option value="hide">Silinmişleri Gizle</option>
-          <option value="showOnlyDeleted">Sadece Silinmiş</option>
-          <option value="showAll">Tümünü Göster</option>
-        </select>
-      </div>
+          <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+            <input
+              value={filters.q}
+              onChange={(e) => setFilters((prev) => ({ ...prev, q: e.target.value }))}
+              placeholder="Ba�l�k veya konum ara..."
+              className="rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/30"
+            />
+            <select
+              value={filters.status}
+              onChange={(e) => setFilters((prev) => ({ ...prev, status: e.target.value as Filters["status"] }))}
+              className="rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            >
+              <option value="all">T�m Durumlar</option>
+              <option value="ACTIVE">ACTIVE</option>
+              <option value="SOLD">SOLD</option>
+            </select>
+            <select
+              value={filters.auth}
+              onChange={(e) => setFilters((prev) => ({ ...prev, auth: e.target.value as Filters["auth"] }))}
+              className="rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            >
+              <option value="all">T�m Yetkilendirme</option>
+              <option value="YETKILI">YETKILI</option>
+              <option value="YETKISIZ">YETKISIZ</option>
+            </select>
+            <select
+              value={filters.portfolio}
+              onChange={(e) => setFilters((prev) => ({ ...prev, portfolio: e.target.value as Filters["portfolio"] }))}
+              className="rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            >
+              <option value="all">T�m Portf�y</option>
+              <option value="SATILIK">SATILIK</option>
+              <option value="KIRALIK">KIRALIK</option>
+            </select>
+            <select
+              value={filters.deleted}
+              onChange={(e) => setFilters((prev) => ({ ...prev, deleted: e.target.value as Filters["deleted"] }))}
+              className="rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+            >
+              <option value="hide">Silinmi�leri Gizle</option>
+              <option value="showOnlyDeleted">Sadece Silinmi�</option>
+              <option value="showAll">T�m�n� G�ster</option>
+            </select>
+          </div>
 
-      {/* Table */}
-      <div className="bg-gray-800 rounded-lg overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-700">
-            <tr>
-              <th className="px-4 py-3 text-left">Başlık</th>
-              <th className="px-4 py-3 text-left">Danışman</th>
-              <th className="px-4 py-3 text-left">Yetkilendirme</th>
-              <th className="px-4 py-3 text-left">Portföy</th>
-              <th className="px-4 py-3 text-left">Fiyat</th>
-              <th className="px-4 py-3 text-left">Durum</th>
-              <th className="px-4 py-3 text-left">İşlemler</th>
-            </tr>
-          </thead>
-          <tbody>
-            {listings.map((l) => {
-              const consultant = consultantMap[l.consultantId];
-              return (
-                <tr key={l.id} className="border-t border-white/10 hover:bg-gray-700">
-                  <td className="px-4 py-3">{l.title}</td>
-                  <td className="px-4 py-3 flex items-center gap-3">
-                    {consultant?.photoUrl ? (
-                      <img
-                        src={consultant.photoUrl}
-                        alt={consultant.name}
-                        className="w-8 h-8 rounded-full"
-                      />
-                    ) : (
-                      <div className="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center text-xs font-medium">
-                        {consultant ? getInitials(consultant.name) : "?"}
-                      </div>
-                    )}
-                    <span>{consultant?.name || "Bilinmiyor"}</span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        l.authorizationType === "YETKILI"
-                          ? "bg-green-600 text-white"
-                          : "bg-red-600 text-white"
-                      }`}
-                    >
-                      {l.authorizationType}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        l.portfolioType === "SATILIK"
-                          ? "bg-blue-600 text-white"
-                          : "bg-purple-600 text-white"
-                      }`}
-                    >
-                      {l.portfolioType}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">{formatCurrency(l.price)}</td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        l.status === "ACTIVE"
-                          ? "bg-green-600 text-white"
-                          : "bg-gray-600 text-white"
-                      }`}
-                    >
-                      {l.status === "ACTIVE" ? "Aktif" : "Satıldı"}
-                    </span>
-                    {l.isDeleted && (
-                      <span className="ml-2 px-2 py-1 rounded-full text-xs font-medium bg-red-600 text-white">
-                        Silinmiş
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    <button className="px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs font-medium">
-                      Görüntüle
-                    </button>
-                  </td>
+          {error ? <div className="mt-4 rounded-md border border-rose-500 bg-rose-500/10 px-3 py-2 text-sm text-rose-200">Error: {error}</div> : null}
+          {statusMessage ? <div className="mt-4 rounded-md border border-emerald-500 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200">{statusMessage}</div> : null}
+
+          <div className="mt-4 overflow-auto rounded-md border border-slate-700">
+            <table className="min-w-full border-collapse text-sm">
+              <thead className="bg-slate-800 text-xs uppercase tracking-wide text-slate-300">
+                <tr>
+                  <th className="border-b border-slate-700 px-3 py-3">Title</th>
+                  <th className="border-b border-slate-700 px-3 py-3">Consultant</th>
+                  <th className="border-b border-slate-700 px-3 py-3">Authorization</th>
+                  <th className="border-b border-slate-700 px-3 py-3">Portfolio / Property</th>
+                  <th className="border-b border-slate-700 px-3 py-3">Price</th>
+                  <th className="border-b border-slate-700 px-3 py-3">Status</th>
+                  <th className="border-b border-slate-700 px-3 py-3">Created</th>
+                  <th className="border-b border-slate-700 px-3 py-3">Deleted</th>
+                  <th className="border-b border-slate-700 px-3 py-3">Actions</th>
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr>
+                    <td colSpan={9} className="px-3 py-5 text-center text-slate-400">Loading listings...</td>
+                  </tr>
+                ) : listings.length === 0 ? (
+                  <tr>
+                    <td colSpan={9} className="px-3 py-5 text-center text-slate-400">No listings found.</td>
+                  </tr>
+                ) : (
+                  listings.map((listing) => (
+                    <tr key={listing.id} className="border-b border-slate-700 last:border-b-0 hover:bg-slate-800/50">
+                      <td className="px-3 py-3">
+                        <div className="font-medium text-slate-100">{listing.title}</div>
+                        <div className="text-xs text-slate-400">{listing.location}</div>
+                      </td>
+                      <td className="px-3 py-3">
+                        <div className="text-slate-100">{listing.consultant.name}</div>
+                        <div className="text-xs text-slate-400">{listing.consultant.email}</div>
+                      </td>
+                      <td className="px-3 py-3">
+                        <select
+                          disabled={savingId === listing.id}
+                          value={listing.authorizationType}
+                          onChange={(e) => patchListing(listing.id, { authorizationType: e.target.value as "YETKILI" | "YETKISIZ" })}
+                          className="rounded border border-slate-700 bg-slate-800 px-2 py-1 text-xs text-slate-100"
+                        >
+                          <option value="YETKILI">YETKILI</option>
+                          <option value="YETKISIZ">YETKISIZ</option>
+                        </select>
+                      </td>
+                      <td className="px-3 py-3">
+                        <div className="text-slate-100">{listing.portfolioType}</div>
+                        <div className="text-xs text-slate-400">{listing.propertyType}</div>
+                      </td>
+                      <td className="px-3 py-3">{formatPrice(listing.price)}</td>
+                      <td className="px-3 py-3">
+                        <select
+                          disabled={savingId === listing.id}
+                          value={listing.status}
+                          onChange={(e) => patchListing(listing.id, { status: e.target.value as "ACTIVE" | "SOLD" })}
+                          className="rounded border border-slate-700 bg-slate-800 px-2 py-1 text-xs text-slate-100"
+                        >
+                          <option value="ACTIVE">ACTIVE</option>
+                          <option value="SOLD">SOLD</option>
+                        </select>
+                      </td>
+                      <td className="px-3 py-3 text-slate-200">{new Date(listing.createdAt).toLocaleString("tr-TR")}</td>
+                      <td className="px-3 py-3">
+                        {listing.isDeleted ? <span className="rounded-full bg-rose-600 px-2 py-1 text-xs text-white">Yes</span> : <span className="rounded-full bg-emerald-600 px-2 py-1 text-xs text-white">No</span>}
+                      </td>
+                      <td className="px-3 py-3">
+                        <button
+                          onClick={() => deleteListing(listing.id)}
+                          disabled={savingId === listing.id}
+                          className="rounded-md bg-rose-600 px-2 py-1 text-xs font-semibold text-white hover:bg-rose-500 disabled:opacity-60"
+                        >
+                          {savingId === listing.id ? "Processing..." : "Delete"}
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
-  );
+  )
 }
