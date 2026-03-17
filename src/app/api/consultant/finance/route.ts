@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 
 async function getConsultantIdFromCookies(): Promise<string | null> {
   const store = await cookies();
-  return store.get("consultantId")?.value ?? null; // sende cookie adı buysa
+  return store.get("consultantId")?.value ?? null; // sende cookie adÄ± buysa
 }
 
 export async function GET(req: NextRequest) {
@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    // SQLite + Decimal -> clientte rahat kullanmak için string döndürmek mantıklı
+    // SQLite + Decimal -> clientte rahat kullanmak iÃ§in string dÃ¶ndÃ¼rmek mantÄ±klÄ±
     const serialized = sales.map((s) => ({
       id: s.id,
       monthKey: s.monthKey,
@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
       listing: s.listing,
     }));
 
-    // Aylık özet (monthKey bazında)
+    // AylÄ±k Ã¶zet (monthKey bazÄ±nda)
     const summaryMap = new Map<string, { monthKey: string; count: number; totalCommission: number; consultantTotal: number; adminTotal: number }>();
 
     for (const s of serialized) {

@@ -207,20 +207,20 @@ export default function Page() {
 
   return (
     <div className="bg-gray-900 text-white min-h-screen p-6">
-      <h1 className="text-xl font-semibold mb-6">Consultant • İlanlar</h1>
+      <h1 className="text-xl font-semibold mb-6">Consultant â€¢ Ä°lanlar</h1>
 
       <div className="flex space-x-4 mb-6">
         <button
           onClick={() => setActiveTab("add")}
           className={`px-4 py-2 rounded-full ${activeTab === "add" ? "bg-blue-600 text-white" : "bg-gray-800 text-white/80 hover:bg-gray-700"}`}
         >
-          İlan Ekle
+          Ä°lan Ekle
         </button>
         <button
           onClick={() => setActiveTab("list")}
           className={`px-4 py-2 rounded-full ${activeTab === "list" ? "bg-blue-600 text-white" : "bg-gray-800 text-white/80 hover:bg-gray-700"}`}
         >
-          İlanlarım
+          Ä°lanlarÄ±m
         </button>
       </div>
 
@@ -257,7 +257,7 @@ export default function Page() {
               >
                 <option value="EV">EV</option>
                 <option value="ARSA">ARSA</option>
-                <option value="DİĞER">DİĞER</option>
+                <option value="DÄ°ÄER">DÄ°ÄER</option>
               </select>
             </div>
             <div>

@@ -6,7 +6,7 @@ import { markListingSold } from "@/lib/actions/listings";
 
 async function getConsultantIdFromCookies(): Promise<string | null> {
   const store = await cookies();
-  return store.get("consultantId")?.value ?? null; // senin cookie adın buysa
+  return store.get("consultantId")?.value ?? null; // senin cookie adÄ±n buysa
 }
 
 export async function GET(req: NextRequest) {
@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
         title: String(body.title ?? "").trim(),
         portfolioType: body.portfolioType,
         propertyType: String(body.propertyType ?? ""),
-        price: body.price, // schema’da Decimal/Float neyse prisma handle eder
+        price: body.price, // schemaâ€™da Decimal/Float neyse prisma handle eder
         rooms: body.rooms ?? null,
         sqm: body.sqm ?? null,
         location: `${body.location?.city ?? ""} ${body.location?.district ?? ""} ${body.location?.neighborhood ?? ""}`.trim(),
@@ -101,7 +101,7 @@ export async function PATCH(req: NextRequest) {
     const id = String(body.id ?? "").trim();
     if (!id) return NextResponse.json({ ok: false, error: "id required" }, { status: 400 });
 
-    // sadece kendi ilanını güncelleyebilsin
+    // sadece kendi ilanÄ±nÄ± gÃ¼ncelleyebilsin
     const listing = await prisma.listing.findUnique({ where: { id } });
     if (!listing || listing.consultantId !== consultantId) {
       return NextResponse.json({ ok: false, error: "Not found" }, { status: 404 });

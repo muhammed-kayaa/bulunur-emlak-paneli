@@ -4,13 +4,13 @@ import { Role } from "@/lib/auth";
 export function Sidebar({ role }: { role: Role }) {
   const links = role === "ADMIN" ? [
     { href: "/admin/dashboard", label: "Dashboard" },
-    { href: "/admin/listings", label: "İlanlar" },
-    { href: "/admin/consultants", label: "Danışmanlar" },
+    { href: "/admin/listings", label: "Ä°lanlar" },
+    { href: "/admin/consultants", label: "DanÄ±ÅŸmanlar" },
     { href: "/admin/finance", label: "Muhasebe" },
     { href: "/admin/reports", label: "Rapor" },
   ] : [
     { href: "/consultant/dashboard", label: "Dashboard" },
-    { href: "/consultant/listings", label: "İlanlar" },
+    { href: "/consultant/listings", label: "Ä°lanlar" },
     { href: "/consultant/finance", label: "Muhasebe" },
   ];
 

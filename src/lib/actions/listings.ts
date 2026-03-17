@@ -22,7 +22,7 @@ export async function markListingSold(
   input: MarkListingSoldInput
 ): Promise<MarkListingSoldResponse> {
   try {
-    const consultantId = await getCurrentConsultantId(); // ✅ await
+    const consultantId = await getCurrentConsultantId(); // âœ… await
     if (!consultantId) return { success: false, error: "Unauthorized: consultantId cookie not found" };
 
     const listingId = (input.listingId ?? "").trim();

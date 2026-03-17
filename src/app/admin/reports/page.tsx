@@ -146,11 +146,11 @@ export default function AdminReportsPage() {
             <div>
               <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Admin</p>
               <h1 className="text-2xl font-bold text-white">Raporlar</h1>
-              <p className="text-sm text-slate-300">Ger�ek API verisiyle ayl�k sat�� ve personel raporu.</p>
+              <p className="text-sm text-slate-300">GerÃ§ek API verisiyle aylÄ±k satÄ±ÅŸ ve personel raporu.</p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <label className="flex items-center gap-2 text-sm text-slate-200">
-                <span className="text-slate-300">Ay se�imi</span>
+                <span className="text-slate-300">Ay seÃ§imi</span>
                 <input
                   type="month"
                   value={monthKey}
@@ -173,27 +173,27 @@ export default function AdminReportsPage() {
             <>
               <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 <div className="rounded-xl border border-slate-700 bg-slate-800 p-3">
-                  <div className="text-xs uppercase tracking-wide text-slate-400">Toplam Dan��man</div>
+                  <div className="text-xs uppercase tracking-wide text-slate-400">Toplam DanÄ±ÅŸman</div>
                   <div className="mt-1 text-2xl font-semibold text-white">{totals.totalConsultants}</div>
                 </div>
                 <div className="rounded-xl border border-slate-700 bg-slate-800 p-3">
-                  <div className="text-xs uppercase tracking-wide text-slate-400">Aktif Dan��man</div>
+                  <div className="text-xs uppercase tracking-wide text-slate-400">Aktif DanÄ±ÅŸman</div>
                   <div className="mt-1 text-2xl font-semibold text-emerald-300">{totals.activeConsultants}</div>
                 </div>
                 <div className="rounded-xl border border-slate-700 bg-slate-800 p-3">
-                  <div className="text-xs uppercase tracking-wide text-slate-400">Toplam �lan</div>
+                  <div className="text-xs uppercase tracking-wide text-slate-400">Toplam Ä°lan</div>
                   <div className="mt-1 text-2xl font-semibold text-white">{totals.totalListings}</div>
                 </div>
                 <div className="rounded-xl border border-slate-700 bg-slate-800 p-3">
-                  <div className="text-xs uppercase tracking-wide text-slate-400">Aktif �lan</div>
+                  <div className="text-xs uppercase tracking-wide text-slate-400">Aktif Ä°lan</div>
                   <div className="mt-1 text-2xl font-semibold text-emerald-300">{totals.activeListings}</div>
                 </div>
                 <div className="rounded-xl border border-slate-700 bg-slate-800 p-3">
-                  <div className="text-xs uppercase tracking-wide text-slate-400">Sat�lan �lan</div>
+                  <div className="text-xs uppercase tracking-wide text-slate-400">SatÄ±lan Ä°lan</div>
                   <div className="mt-1 text-2xl font-semibold text-sky-300">{totals.soldListings}</div>
                 </div>
                 <div className="rounded-xl border border-slate-700 bg-slate-800 p-3">
-                  <div className="text-xs uppercase tracking-wide text-slate-400">Silinen �lan</div>
+                  <div className="text-xs uppercase tracking-wide text-slate-400">Silinen Ä°lan</div>
                   <div className="mt-1 text-2xl font-semibold text-rose-300">{totals.deletedListings}</div>
                 </div>
               </div>
@@ -201,17 +201,17 @@ export default function AdminReportsPage() {
               <div className="mt-4 rounded-xl border border-slate-700 bg-slate-800 p-4">
                 <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                   <div>
-                    <div className="text-xs uppercase tracking-wide text-slate-400">Ayl�k Finansal �zet</div>
+                    <div className="text-xs uppercase tracking-wide text-slate-400">AylÄ±k Finansal Ã–zet</div>
                     <div className="text-sm text-slate-300">{monthKey}</div>
                   </div>
-                  <div className="text-xs text-slate-300">{financeLoading ? "Y�kleniyor..." : "G�ncellendi"}</div>
+                  <div className="text-xs text-slate-300">{financeLoading ? "YÃ¼kleniyor..." : "GÃ¼ncellendi"}</div>
                 </div>
                 {financeLoading ? (
                   <div className="rounded-md border border-slate-700 bg-slate-900 p-3 text-sm text-slate-300">Loading finance data...</div>
                 ) : summary ? (
                   <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                     <div className="rounded-lg border border-slate-700 bg-slate-900 p-3">
-                      <div className="text-[11px] uppercase tracking-wide text-slate-400">Sat�� Adedi</div>
+                      <div className="text-[11px] uppercase tracking-wide text-slate-400">SatÄ±ÅŸ Adedi</div>
                       <div className="mt-1 text-xl font-semibold text-white">{summary.salesCount}</div>
                     </div>
                     <div className="rounded-lg border border-slate-700 bg-slate-900 p-3">
@@ -221,13 +221,13 @@ export default function AdminReportsPage() {
                       </div>
                     </div>
                     <div className="rounded-lg border border-slate-700 bg-slate-900 p-3">
-                      <div className="text-[11px] uppercase tracking-wide text-slate-400">Dan��man Pay�</div>
+                      <div className="text-[11px] uppercase tracking-wide text-slate-400">DanÄ±ÅŸman PayÄ±</div>
                       <div className="mt-1 text-xl font-semibold text-sky-300">
                         {formatCurrency(summary.totalConsultantShare)}
                       </div>
                     </div>
                     <div className="rounded-lg border border-slate-700 bg-slate-900 p-3">
-                      <div className="text-[11px] uppercase tracking-wide text-slate-400">Admin Pay�</div>
+                      <div className="text-[11px] uppercase tracking-wide text-slate-400">Admin PayÄ±</div>
                       <div className="mt-1 text-xl font-semibold text-amber-300">
                         {formatCurrency(summary.totalAdminShare)}
                       </div>
@@ -241,20 +241,20 @@ export default function AdminReportsPage() {
               <div className="mt-4 rounded-xl border border-slate-700 bg-slate-900 p-3">
                 <div className="mb-2 flex items-center justify-between">
                   <div>
-                    <h2 className="text-lg font-semibold text-white">Son Sat��lar</h2>
-                    <p className="text-sm text-slate-300">Se�ilen aya ait sat�� detaylar�</p>
+                    <h2 className="text-lg font-semibold text-white">Son SatÄ±ÅŸlar</h2>
+                    <p className="text-sm text-slate-300">SeÃ§ilen aya ait satÄ±ÅŸ detaylarÄ±</p>
                   </div>
                 </div>
                 <div className="overflow-x-auto rounded-md border border-slate-700">
                   <table className="min-w-full border-collapse text-sm">
                     <thead className="bg-slate-800 text-left text-xs uppercase tracking-wide text-slate-300">
                       <tr>
-                        <th className="border-b border-slate-700 px-2 py-2">Sat�� Tarihi</th>
-                        <th className="border-b border-slate-700 px-2 py-2">�lan Ba�l���</th>
-                        <th className="border-b border-slate-700 px-2 py-2">Dan��man</th>
+                        <th className="border-b border-slate-700 px-2 py-2">SatÄ±ÅŸ Tarihi</th>
+                        <th className="border-b border-slate-700 px-2 py-2">Ä°lan BaÅŸlÄ±ÄŸÄ±</th>
+                        <th className="border-b border-slate-700 px-2 py-2">DanÄ±ÅŸman</th>
                         <th className="border-b border-slate-700 px-2 py-2">Komisyon</th>
-                        <th className="border-b border-slate-700 px-2 py-2">Dan��man Pay�</th>
-                        <th className="border-b border-slate-700 px-2 py-2">Admin Pay�</th>
+                        <th className="border-b border-slate-700 px-2 py-2">DanÄ±ÅŸman PayÄ±</th>
+                        <th className="border-b border-slate-700 px-2 py-2">Admin PayÄ±</th>
                       </tr>
                     </thead>
                     <tbody>

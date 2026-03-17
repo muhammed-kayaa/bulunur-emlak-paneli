@@ -68,7 +68,7 @@ export default function ConsultantFinancePage() {
 
   return (
     <div className="pb-8">
-      <h1 className="text-xl font-semibold">Consultant • Muhasebe</h1>
+      <h1 className="text-xl font-semibold">Consultant â€¢ Muhasebe</h1>
 
       {/* month selector */}
       <div className="mt-4 flex items-center space-x-2">
@@ -86,34 +86,34 @@ export default function ConsultantFinancePage() {
 
       {/* summary cards */}
       <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <SummaryCard label="Satış" value={summary.count.toString()} />
+        <SummaryCard label="SatÄ±ÅŸ" value={summary.count.toString()} />
         <SummaryCard
           label="Toplam Komisyon"
           value={formatTRY(summary.totalCommission)}
         />
         <SummaryCard
-          label="Danışman Payı"
+          label="DanÄ±ÅŸman PayÄ±"
           value={formatTRY(summary.consultantTotal)}
         />
         <SummaryCard
-          label="Admin Payı"
+          label="Admin PayÄ±"
           value={formatTRY(summary.adminTotal)}
         />
       </div>
 
       {/* table of sales */}
-      {loading && <p className="mt-4">Yükleniyor...</p>}
+      {loading && <p className="mt-4">YÃ¼kleniyor...</p>}
       {!loading && (
         <div className="mt-6 overflow-auto">
           <table className="min-w-full text-sm text-left">
             <thead>
               <tr>
-                <th className="px-4 py-2">Satış Tarihi</th>
-                <th className="px-4 py-2">İlan</th>
+                <th className="px-4 py-2">SatÄ±ÅŸ Tarihi</th>
+                <th className="px-4 py-2">Ä°lan</th>
                 <th className="px-4 py-2">Lokasyon</th>
                 <th className="px-4 py-2">Komisyon</th>
-                <th className="px-4 py-2">Danışman Payı</th>
-                <th className="px-4 py-2">Admin Payı</th>
+                <th className="px-4 py-2">DanÄ±ÅŸman PayÄ±</th>
+                <th className="px-4 py-2">Admin PayÄ±</th>
                 <th className="px-4 py-2">Komisyon %</th>
               </tr>
             </thead>

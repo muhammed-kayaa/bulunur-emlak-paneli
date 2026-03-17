@@ -15,7 +15,7 @@ export default function LoginPage() {
     const r = await fetch("/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      credentials: "include", // ✅ COOKIE TARAYICIYA YAZILSIN
+      credentials: "include", // âœ… COOKIE TARAYICIYA YAZILSIN
       body: JSON.stringify({ email }),
     });
 
@@ -26,7 +26,7 @@ export default function LoginPage() {
       return;
     }
 
-    // role'a göre yönlendir
+    // role'a gÃ¶re yÃ¶nlendir
     if (data.role === "ADMIN") router.replace("/admin/dashboard");
     else router.replace("/consultant/dashboard");
   }
@@ -34,7 +34,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center p-6">
       <form onSubmit={onSubmit} className="w-full max-w-sm space-y-4">
-        <h1 className="text-xl font-semibold">Giriş</h1>
+        <h1 className="text-xl font-semibold">GiriÅŸ</h1>
 
         <input
           className="w-full border rounded px-3 py-2"
@@ -44,7 +44,7 @@ export default function LoginPage() {
         />
 
         <button className="w-full rounded bg-black text-white py-2">
-          Giriş Yap
+          GiriÅŸ Yap
         </button>
 
         {err && <p className="text-sm text-red-600">{err}</p>}

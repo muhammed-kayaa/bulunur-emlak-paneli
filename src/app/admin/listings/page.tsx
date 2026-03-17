@@ -113,7 +113,7 @@ export default function AdminListingsPage() {
   }
 
   const deleteListing = async (id: string) => {
-    if (!confirm("Bu ilan� silmek istedi�inize emin misiniz?")) return
+    if (!confirm("Bu ilanÄ± silmek istediÄŸinize emin misiniz?")) return
     setSavingId(id)
     setStatusMessage(null)
     try {
@@ -152,7 +152,7 @@ export default function AdminListingsPage() {
             <input
               value={filters.q}
               onChange={(e) => setFilters((prev) => ({ ...prev, q: e.target.value }))}
-              placeholder="Ba�l�k veya konum ara..."
+              placeholder="BaÅŸlÄ±k veya konum ara..."
               className="rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/30"
             />
             <select
@@ -160,7 +160,7 @@ export default function AdminListingsPage() {
               onChange={(e) => setFilters((prev) => ({ ...prev, status: e.target.value as Filters["status"] }))}
               className="rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             >
-              <option value="all">T�m Durumlar</option>
+              <option value="all">TÃ¼m Durumlar</option>
               <option value="ACTIVE">ACTIVE</option>
               <option value="SOLD">SOLD</option>
             </select>
@@ -169,7 +169,7 @@ export default function AdminListingsPage() {
               onChange={(e) => setFilters((prev) => ({ ...prev, auth: e.target.value as Filters["auth"] }))}
               className="rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             >
-              <option value="all">T�m Yetkilendirme</option>
+              <option value="all">TÃ¼m Yetkilendirme</option>
               <option value="YETKILI">YETKILI</option>
               <option value="YETKISIZ">YETKISIZ</option>
             </select>
@@ -178,7 +178,7 @@ export default function AdminListingsPage() {
               onChange={(e) => setFilters((prev) => ({ ...prev, portfolio: e.target.value as Filters["portfolio"] }))}
               className="rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             >
-              <option value="all">T�m Portf�y</option>
+              <option value="all">TÃ¼m PortfÃ¶y</option>
               <option value="SATILIK">SATILIK</option>
               <option value="KIRALIK">KIRALIK</option>
             </select>
@@ -187,9 +187,9 @@ export default function AdminListingsPage() {
               onChange={(e) => setFilters((prev) => ({ ...prev, deleted: e.target.value as Filters["deleted"] }))}
               className="rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100"
             >
-              <option value="hide">Silinmi�leri Gizle</option>
-              <option value="showOnlyDeleted">Sadece Silinmi�</option>
-              <option value="showAll">T�m�n� G�ster</option>
+              <option value="hide">SilinmiÅŸleri Gizle</option>
+              <option value="showOnlyDeleted">Sadece SilinmiÅŸ</option>
+              <option value="showAll">TÃ¼mÃ¼nÃ¼ GÃ¶ster</option>
             </select>
           </div>
 

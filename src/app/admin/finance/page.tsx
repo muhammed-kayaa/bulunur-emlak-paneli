@@ -84,7 +84,7 @@ export default function AdminFinancePage() {
       const res = await fetch(`/api/admin/finance?monthKey=${encodeURIComponent(activeMonthKey)}`)
       const json = (await res.json()) as ApiResponse
       if (!res.ok || !json.ok || !json.data) {
-        setError(json?.error || "Can�t load finance data")
+        setError(json?.error || "Canï¿½t load finance data")
         setRows([])
         setSummary({ salesCount: 0, totalCommission: 0, totalConsultantShare: 0, totalAdminShare: 0 })
         return
@@ -93,7 +93,7 @@ export default function AdminFinancePage() {
       setRows(json.data.rows ?? [])
       setSummary(json.data.summary ?? { salesCount: 0, totalCommission: 0, totalConsultantShare: 0, totalAdminShare: 0 })
     } catch {
-      setError("Can�t load finance data")
+      setError("Canï¿½t load finance data")
       setRows([])
       setSummary({ salesCount: 0, totalCommission: 0, totalConsultantShare: 0, totalAdminShare: 0 })
     } finally {

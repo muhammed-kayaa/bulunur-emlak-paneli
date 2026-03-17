@@ -16,7 +16,7 @@ export type Consultant = {
 let consultants: Consultant[] = [
   {
     id: "1",
-    name: "Ahmet Yılmaz",
+    name: "Ahmet YÄ±lmaz",
     email: "ahmet.yilmaz@example.com",
     photoUrl: "",
     commissionRate: 5,
@@ -30,7 +30,7 @@ let consultants: Consultant[] = [
   },
   {
     id: "2",
-    name: "Ayşe Kaya",
+    name: "AyÅŸe Kaya",
     email: "ayse.kaya@example.com",
     photoUrl: "",
     commissionRate: 7,
@@ -58,7 +58,7 @@ let consultants: Consultant[] = [
   },
   {
     id: "4",
-    name: "Fatma Çelik",
+    name: "Fatma Ã‡elik",
     email: "fatma.celik@example.com",
     photoUrl: "",
     commissionRate: 8,
@@ -72,7 +72,7 @@ let consultants: Consultant[] = [
   },
   {
     id: "5",
-    name: "Ali Öz",
+    name: "Ali Ã–z",
     email: "ali.oz@example.com",
     photoUrl: "",
     commissionRate: 4,
@@ -86,7 +86,7 @@ let consultants: Consultant[] = [
   },
   {
     id: "6",
-    name: "Zeynep Aydın",
+    name: "Zeynep AydÄ±n",
     email: "zeynep.aydin@example.com",
     photoUrl: "",
     commissionRate: 9,
